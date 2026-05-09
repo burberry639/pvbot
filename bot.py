@@ -3,8 +3,6 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 import re
-from PIL import Image, ImageDraw, ImageFont
-import io
 from collections import defaultdict
 import asyncio
 
@@ -148,12 +146,13 @@ class ConfessionModal(discord.ui.Modal, title='Confession Anonyme'):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Générer l'image avec la confession
-        image = generate_confession_image(self.confession.value)
-        
-        # Envoyer l'image anonymement
-        file = discord.File(image, filename='confession.png')
-        await interaction.response.send_message(file=file)
+        # Envoyer la confession comme embed anonyme
+        embed = discord.Embed(
+            title="📝 Confession Anonyme",
+            description=self.confession.value,
+            color=0x000000
+        )
+        await interaction.response.send_message(embed=embed)
 
 # Vue avec le bouton de confession
 class ConfessionView(discord.ui.View):
@@ -169,54 +168,6 @@ async def confession(ctx):
     """Envoie un bouton pour faire une confession anonyme"""
     view = ConfessionView()
     await ctx.send('Clique sur le bouton pour faire une confession anonyme !', view=view)
-
-def generate_confession_image(text):
-    """Génère une image avec le texte de la confession"""
-    # Créer une image noire
-    width, height = 800, 400
-    image = Image.new('RGB', (width, height), color=(0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    
-    # Essayer d'utiliser une police, sinon utiliser la police par défaut
-    try:
-        font = ImageFont.truetype("arial.ttf", 30)
-    except:
-        font = ImageFont.load_default()
-    
-    # Ajouter le texte (avec wrap pour les longs textes)
-    margin = 50
-    max_width = width - 2 * margin
-    
-    # Diviser le texte en lignes
-    words = text.split(' ')
-    lines = []
-    current_line = []
-    
-    for word in words:
-        current_line.append(word)
-        line_text = ' '.join(current_line)
-        bbox = draw.textbbox((0, 0), line_text, font=font)
-        line_width = bbox[2] - bbox[0]
-        
-        if line_width > max_width:
-            current_line.pop()
-            lines.append(' '.join(current_line))
-            current_line = [word]
-    
-    if current_line:
-        lines.append(' '.join(current_line))
-    
-    # Dessiner les lignes
-    y_position = margin
-    for line in lines:
-        draw.text((margin, y_position), line, fill=(255, 255, 255), font=font)
-        y_position += 40
-    
-    # Sauvegarder dans un buffer
-    buffer = io.BytesIO()
-    image.save(buffer, format='PNG')
-    buffer.seek(0)
-    return buffer
 
 # Lancer le bot
 bot.run(os.getenv('DISCORD_TOKEN'))
